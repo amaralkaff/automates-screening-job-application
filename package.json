@@ -13,6 +13,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "@chroma-core/default-embed": "^0.1.8",
     "@chroma-core/google-gemini": "^0.1.7",
     "@google/genai": "^1.25.0",
     "@hono/node-server": "^1.19.5",
