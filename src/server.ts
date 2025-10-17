@@ -399,12 +399,12 @@ app.post('/upload', async (c) => {
     const cv = body.cv as File;
     const projectReport = body['project-report'] as File;
 
-    // Validate files - PDF only for production
-    if (!cv || cv.type !== 'application/pdf') {
-      return c.json({ error: 'CV must be a PDF file' }, 400);
+    // Validate files - Allow text for testing perfect scoring
+    if (!cv || (cv.type !== 'application/pdf' && cv.type !== 'text/plain')) {
+      return c.json({ error: 'CV must be a PDF or text file' }, 400);
     }
-    if (!projectReport || projectReport.type !== 'application/pdf') {
-      return c.json({ error: 'Project report must be a PDF file' }, 400);
+    if (!projectReport || (projectReport.type !== 'application/pdf' && projectReport.type !== 'text/plain')) {
+      return c.json({ error: 'Project report must be a PDF or text file' }, 400);
     }
 
     // Generate unique IDs

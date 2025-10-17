@@ -1,4 +1,6 @@
+import 'pdf-parse/worker';
 import { readFile } from 'fs/promises';
+import { PDFParse } from 'pdf-parse';
 import { getOrCreateCollection } from '../../chroma-collection';
 import type { DocumentMetadata } from '../types';
 
@@ -18,9 +20,16 @@ export class DocumentProcessor {
 
       // Check if it's a real PDF file (starts with %PDF)
       if (header === '%PDF') {
-        // Real PDF file - return placeholder for now
-        // In production, this would use a proper PDF parsing library
-        return `PDF document detected and processed. File size: ${fileBuffer.length} bytes. This is a binary PDF file that requires proper PDF parsing for full text extraction.`;
+        // Real PDF file - parse text content using pdf-parse v2
+        try {
+          const parser = new PDFParse({ data: fileBuffer });
+          const result = await parser.getText();
+          await parser.destroy();
+          return this.sanitizeText(result.text);
+        } catch (error) {
+          console.error('Error parsing PDF:', error);
+          return `PDF document detected but parsing failed. File size: ${fileBuffer.length} bytes.`;
+        }
       } else {
         // Text file renamed as PDF - treat as text
         try {
