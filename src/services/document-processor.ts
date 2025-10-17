@@ -3,11 +3,17 @@ import { getOrCreateCollection } from '../../chroma-collection';
 import type { DocumentMetadata } from '../types';
 
 export class DocumentProcessor {
-  private async extractTextFromPDF(filePath: string): Promise<string> {
+  private async extractTextFromFile(filePath: string): Promise<string> {
     try {
       const fileBuffer = await readFile(filePath);
 
-      // Use a simpler PDF parsing approach that works with Bun
+      // Check if it's a text file by extension
+      if (filePath.endsWith('.txt')) {
+        const textContent = fileBuffer.toString('utf8');
+        return this.sanitizeText(textContent);
+      }
+
+      // For PDF files, use a simpler approach that works with Bun
       // For now, return a placeholder that will work for testing
       // In production, this would extract actual PDF text
       const textContent = fileBuffer.toString('utf8');
@@ -20,40 +26,57 @@ export class DocumentProcessor {
         .trim();
 
       if (cleanText.length > 100) {
-        return cleanText;
+        return this.sanitizeText(cleanText);
       } else {
         // For actual PDF files, we'd need a proper PDF parser
         // For now, return a placeholder
         return `PDF document processed successfully. File size: ${fileBuffer.length} bytes`;
       }
     } catch (error) {
-      console.error('Error extracting text from PDF:', error);
-      throw new Error('Failed to extract text from PDF');
+      console.error('Error extracting text from file:', error);
+      throw new Error('Failed to extract text from file');
     }
   }
 
+  private sanitizeText(text: string): string {
+    return text
+      // Remove problematic Unicode characters that cause JSON parsing issues
+      .replace(/[\uD800-\uDBFF]$/, '') // Remove lone leading surrogates at end of string
+      .replace(/[\uDC00-\uDFFF]^/, '') // Remove lone trailing surrogates at start of string
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '') // Control characters except tab, newline, carriage return
+      .replace(/[\uFFFE\uFFFF]/g, '') // Invalid Unicode characters
+      // Replace any remaining problematic characters with spaces
+      .replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/g, '') // Lone high surrogates
+      .replace(/(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '') // Lone low surrogates
+      .normalize('NFC') // Normalize Unicode to canonical form
+      .trim();
+  }
+
   private chunkText(text: string, chunkSize: number = 800, overlap: number = 200): string[] {
+    // Sanitize text first to prevent ChromaDB JSON encoding issues
+    const cleanText = this.sanitizeText(text);
+
     const chunks: string[] = [];
     let start = 0;
 
-    while (start < text.length) {
+    while (start < cleanText.length) {
       let end = start + chunkSize;
 
-      if (end >= text.length) {
-        chunks.push(text.slice(start));
+      if (end >= cleanText.length) {
+        chunks.push(this.sanitizeText(cleanText.slice(start)));
         break;
       }
 
       // Try to break at a sentence or paragraph
-      const lastPeriod = text.lastIndexOf('.', end);
-      const lastNewline = text.lastIndexOf('\n', end);
+      const lastPeriod = cleanText.lastIndexOf('.', end);
+      const lastNewline = cleanText.lastIndexOf('\n', end);
       const breakPoint = Math.max(lastPeriod, lastNewline);
 
       if (breakPoint > start) {
         end = breakPoint + 1;
       }
 
-      chunks.push(text.slice(start, end).trim());
+      chunks.push(this.sanitizeText(cleanText.slice(start, end).trim()));
       start = Math.max(start + 1, end - overlap);
     }
 
@@ -67,11 +90,11 @@ export class DocumentProcessor {
   ): Promise<void> {
     try {
 
-      // Extract text from PDF
-      const text = await this.extractTextFromPDF(filePath);
+      // Extract text from file
+      const text = await this.extractTextFromFile(filePath);
 
       if (!text.trim()) {
-        throw new Error('No text extracted from PDF');
+        throw new Error('No text extracted from file');
       }
 
       // Chunk the text for better embedding
@@ -95,10 +118,10 @@ export class DocumentProcessor {
 
       const ids = chunks.map((_, index) => `${documentId}-chunk-${index}`);
 
-      // ChromaDB batch size limit (maximum 1000 records per batch)
-      const BATCH_SIZE = 800;
+      // Gemini API batch size limit (maximum 100 requests per batch)
+      const BATCH_SIZE = 100;
 
-      // Process in batches to avoid ChromaDB batch size limits
+      // Process in batches to avoid Gemini API batch size limits
       for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
         const endIndex = Math.min(i + BATCH_SIZE, chunks.length);
 
@@ -273,7 +296,7 @@ export class DocumentProcessor {
         { text: projectScoringRubric, type: 'scoring_rubric' },
       ];
 
-      const BATCH_SIZE = 800;
+      const BATCH_SIZE = 100;
 
       for (const doc of referenceDocs) {
         const chunks = this.chunkText(doc.text);
@@ -290,7 +313,7 @@ export class DocumentProcessor {
 
         const ids = chunks.map((_, index) => `ref-${doc.type}-chunk-${index}`);
 
-        // Process in batches to avoid ChromaDB batch size limits
+        // Process in batches to avoid Gemini API batch size limits
         for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
           const endIndex = Math.min(i + BATCH_SIZE, chunks.length);
 

@@ -1,7 +1,7 @@
 import { GoogleGenAI, ApiError } from '@google/genai';
 import { getOrCreateCollection } from '../../chroma-collection';
 import type { Job, EvaluationResult, CVEvaluation, ProjectEvaluation } from '../types';
-import { JobQueue } from './job-queue';
+import { BullJobQueue } from './bull-job-queue';
 
 interface LLMResponse {
   response: string;
@@ -11,9 +11,9 @@ interface LLMResponse {
 
 export class EvaluationPipeline {
   private genAI: GoogleGenAI;
-  private jobQueue: JobQueue;
+  private jobQueue: BullJobQueue;
 
-  constructor(jobQueue: JobQueue) {
+  constructor(jobQueue: BullJobQueue) {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       throw new Error('GEMINI_API_KEY environment variable is not set');

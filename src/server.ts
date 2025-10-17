@@ -9,22 +9,30 @@ import { join } from 'path';
 import { existsSync } from 'fs';
 import { DocumentProcessor } from './services/document-processor';
 import { EvaluationPipeline } from './services/evaluation-pipeline';
-import { JobQueue } from './services/job-queue';
+import { BullJobQueue } from './services/bull-job-queue';
 
 const app = new Hono();
 
 // Middleware
 app.use('*', cors({
-  origin: ['http://localhost:3000', 'http://localhost:5173'],
+  origin: [
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'http://34.101.92.66:3000',
+    'http://34.101.92.66:3001',
+    'http://34.101.92.66',
+    'http://localhost:3001'
+  ],
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
 }));
 
 app.use('*', logger());
 
 // Initialize services
 const documentProcessor = new DocumentProcessor();
-const jobQueue = new JobQueue();
+const jobQueue = new BullJobQueue();
 const evaluationPipeline = new EvaluationPipeline(jobQueue);
 // Connect the services
 jobQueue.setEvaluationPipeline(evaluationPipeline);
@@ -44,6 +52,10 @@ const openAPISpec = {
     description: 'Backend service that automates the initial screening of job applications using AI',
   },
   servers: [
+    {
+      url: 'http://34.101.92.66',
+      description: 'Production server',
+    },
     {
       url: 'http://localhost:3000',
       description: 'Development server',
@@ -387,21 +399,23 @@ app.post('/upload', async (c) => {
     const cv = body.cv as File;
     const projectReport = body['project-report'] as File;
 
-    // Validate files
-    if (!cv || cv.type !== 'application/pdf') {
-      return c.json({ error: 'CV must be a PDF file' }, 400);
+    // Validate files - temporarily allowing text files for testing
+    if (!cv || (cv.type !== 'application/pdf' && !cv.type.startsWith('text/plain'))) {
+      return c.json({ error: 'CV must be a PDF or text file' }, 400);
     }
-    if (!projectReport || projectReport.type !== 'application/pdf') {
-      return c.json({ error: 'Project report must be a PDF file' }, 400);
+    if (!projectReport || (projectReport.type !== 'application/pdf' && !projectReport.type.startsWith('text/plain'))) {
+      return c.json({ error: 'Project report must be a PDF or text file' }, 400);
     }
 
     // Generate unique IDs
     const cvId = nanoid();
     const projectReportId = nanoid();
 
-    // Save files
-    const cvPath = join(UPLOAD_DIR, `${cvId}.pdf`);
-    const projectReportPath = join(UPLOAD_DIR, `${projectReportId}.pdf`);
+    // Save files with appropriate extensions
+    const cvExtension = cv.type.startsWith('text/plain') ? '.txt' : '.pdf';
+    const projectExtension = projectReport.type.startsWith('text/plain') ? '.txt' : '.pdf';
+    const cvPath = join(UPLOAD_DIR, `${cvId}${cvExtension}`);
+    const projectReportPath = join(UPLOAD_DIR, `${projectReportId}${projectExtension}`);
 
     await writeFile(cvPath, Buffer.from(await cv.arrayBuffer()));
     await writeFile(projectReportPath, Buffer.from(await projectReport.arrayBuffer()));

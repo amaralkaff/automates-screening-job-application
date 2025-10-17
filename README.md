@@ -7,7 +7,7 @@ Automated job application screening using AI to evaluate CVs and project reports
 - **PDF Processing**: Extract and analyze text from CV and project report PDFs
 - **AI Evaluation**: Google Gemini-powered assessment with LLM chaining
 - **RAG System**: Vector database (ChromaDB) for context-aware evaluations
-- **Async Processing**: Non-blocking job queue system for long-running evaluations
+- **Redis Job Queue**: Persistent job processing with Bull Queue
 - **RESTful API**: Complete API with Swagger documentation
 - **Standardized Scoring**: Structured 1-5 scale evaluation criteria
 
@@ -17,6 +17,7 @@ Automated job application screening using AI to evaluate CVs and project reports
 - Node.js 18+ or Bun
 - Google Gemini API key
 - Redis (for job queue)
+- ChromaDB (vector database)
 
 ### Installation
 
@@ -35,6 +36,9 @@ Automated job application screening using AI to evaluate CVs and project reports
    ```bash
    # Start Redis
    redis-server
+
+   # Start ChromaDB (in another terminal)
+   bunx chroma run
 
    # Start application
    bun start
@@ -67,11 +71,20 @@ curl -X POST http://localhost:3000/evaluate \
 curl http://localhost:3000/status/job_789
 ```
 
-## Documentation
+## Architecture
 
-- **Swagger UI**: http://localhost:3000/swagger
-- **API Spec**: http://localhost:3000/api-spec
-- **Health Check**: http://localhost:3000/health
+```
+┌─────────────┐    ┌──────────────┐    ┌─────────────┐
+│   Client    │───▶│   REST API    │───▶│  Bull Queue  │
+└─────────────┘    └──────────────┘    │  (Redis)    │
+                           │           └─────────────┘
+                           ▼                    │
+                   ┌─────────────┐            ▼
+                   │   ChromaDB   │    ┌─────────────┐
+                   │ (Vectors)    │    │   Gemini     │
+                   └─────────────┘    │    (AI)     │
+                                      └─────────────┘
+```
 
 ## Scoring System
 
@@ -88,20 +101,6 @@ curl http://localhost:3000/status/job_789
 - Documentation: 15%
 - Creativity: 10%
 
-## Architecture
-
-```
-┌─────────────┐    ┌──────────────┐    ┌─────────────┐
-│   Client    │───▶│   REST API    │───▶│  Job Queue   │
-└─────────────┘    └──────────────┘    └─────────────┘
-                           │                    │
-                           ▼                    ▼
-                   ┌─────────────┐    ┌─────────────┐
-                   │   ChromaDB   │    │   Gemini     │
-                   │ (Vectors)    │    │    (AI)     │
-                   └─────────────┘    └─────────────┘
-```
-
 ## Environment Variables
 
 ```bash
@@ -114,6 +113,11 @@ PORT=3000
 NODE_ENV=development
 UPLOAD_DIR=./uploads
 ```
+
+## Documentation
+
+- **Swagger UI**: http://localhost:3000/swagger
+- **Health Check**: http://localhost:3000/health
 
 ## License
 
