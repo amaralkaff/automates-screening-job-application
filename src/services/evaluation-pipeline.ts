@@ -409,7 +409,7 @@ export class EvaluationPipeline {
     jobTitle: string,
     cvDocumentId: string,
     projectReportId: string
-  ): Promise<void> {
+  ): Promise<EvaluationResult> {
     try {
   
       // Update job status to processing
@@ -482,13 +482,18 @@ export class EvaluationPipeline {
         result
       });
 
-        
+      // Return the result for Bull queue
+      return result;
+
     } catch (error) {
       console.error(`Evaluation failed for job ${jobId}:`, error);
       await this.jobQueue.updateJob(jobId, {
         status: 'failed',
         error: error instanceof Error ? error.message : 'Unknown error'
       });
+
+      // Re-throw error so Bull can handle it
+      throw error;
     }
   }
 }

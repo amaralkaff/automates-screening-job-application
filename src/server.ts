@@ -399,21 +399,21 @@ app.post('/upload', async (c) => {
     const cv = body.cv as File;
     const projectReport = body['project-report'] as File;
 
-    // Validate files - temporarily allowing text files for testing
-    if (!cv || (cv.type !== 'application/pdf' && !cv.type.startsWith('text/plain'))) {
-      return c.json({ error: 'CV must be a PDF or text file' }, 400);
+    // Validate files - PDF only for production
+    if (!cv || cv.type !== 'application/pdf') {
+      return c.json({ error: 'CV must be a PDF file' }, 400);
     }
-    if (!projectReport || (projectReport.type !== 'application/pdf' && !projectReport.type.startsWith('text/plain'))) {
-      return c.json({ error: 'Project report must be a PDF or text file' }, 400);
+    if (!projectReport || projectReport.type !== 'application/pdf') {
+      return c.json({ error: 'Project report must be a PDF file' }, 400);
     }
 
     // Generate unique IDs
     const cvId = nanoid();
     const projectReportId = nanoid();
 
-    // Save files with appropriate extensions
-    const cvExtension = cv.type.startsWith('text/plain') ? '.txt' : '.pdf';
-    const projectExtension = projectReport.type.startsWith('text/plain') ? '.txt' : '.pdf';
+    // Save files with .pdf extension
+    const cvExtension = '.pdf';
+    const projectExtension = '.pdf';
     const cvPath = join(UPLOAD_DIR, `${cvId}${cvExtension}`);
     const projectReportPath = join(UPLOAD_DIR, `${projectReportId}${projectExtension}`);
 
@@ -453,9 +453,8 @@ app.post('/evaluate', async (c) => {
       status: 'queued',
     });
 
-    // Start async processing
-    evaluationPipeline.processEvaluation(job.id, jobTitle, cvDocumentId, projectReportId)
-      .catch(error => console.error('Pipeline error:', error));
+    // Bull queue will automatically start processing the job
+    // No need for manual async processing
 
     return c.json({
       jobId: job.id,

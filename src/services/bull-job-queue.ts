@@ -50,12 +50,13 @@ export class BullJobQueue {
   }
 
   private setupProcessors(): void {
-    // Process jobs with concurrency limit
-    this.queue.process(3, async (bullJob) => {
-      const { id, jobTitle, cvDocumentId, projectReportId } = bullJob.data;
+    // Process evaluation jobs with concurrency limit
+    this.queue.process('evaluation', 3, async (bullJob) => {
+      const { jobTitle, cvDocumentId, projectReportId } = bullJob.data;
+      const id = bullJob.id!.toString();
 
       try {
-        console.log(`🔄 Processing job ${id} for ${jobTitle}`);
+        console.log(`🔄 Processing evaluation job ${id} for ${jobTitle}`);
 
         // Update job status to processing
         await this.updateJobStatus(id, 'processing', 10);
@@ -64,15 +65,21 @@ export class BullJobQueue {
           throw new Error('Evaluation pipeline not initialized');
         }
 
-        // Run the evaluation pipeline
-        await this.evaluationPipeline.processEvaluation(
+        // Run the evaluation pipeline and return result
+        const result = await this.evaluationPipeline.processEvaluation(
           id,
           jobTitle,
           cvDocumentId,
           projectReportId
         );
 
+        // Update job with result
+        await this.updateJobStatus(id, 'completed', 100, { result });
+
         console.log(`✅ Job ${id} completed successfully`);
+
+        // Return result for Bull to store
+        return result;
       } catch (error) {
         console.error(`❌ Job ${id} failed:`, error);
 
