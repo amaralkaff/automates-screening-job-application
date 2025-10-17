@@ -15,25 +15,33 @@ Automated job application screening using AI to evaluate CVs and project reports
 ### Prerequisites
 - Node.js 18+ or Bun
 - Google Gemini API key
+- ChromaDB (vector database)
 
 ### Installation
 
 1. **Install dependencies**:
    ```bash
    bun install
+   bun add chromadb
    ```
 
-2. **Set environment variable**:
+2. **Start ChromaDB** (required for vector storage):
+   ```bash
+   bunx chroma run
+   ```
+   ChromaDB will start on http://localhost:8000
+
+3. **Set environment variables**:
    ```bash
    export GEMINI_API_KEY=your_gemini_api_key_here
    ```
 
-3. **Start the server**:
+4. **Start the server**:
    ```bash
    bun start
    ```
 
-Server starts on port 3001 and initializes the vector database automatically.
+Server starts on port 3000 and connects to ChromaDB automatically.
 
 ## API Endpoints
 

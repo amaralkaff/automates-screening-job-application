@@ -11,8 +11,7 @@ export class JobQueue {
     };
 
     this.jobs.set(job.id, job);
-    console.log(`Job ${job.id} added to queue`);
-    return job;
+      return job;
   }
 
   async getJob(jobId: string): Promise<Job | null> {
@@ -36,8 +35,7 @@ export class JobQueue {
     };
 
     this.jobs.set(jobId, updatedJob);
-    console.log(`Job ${jobId} updated: ${JSON.stringify(updates)}`);
-    return updatedJob;
+        return updatedJob;
   }
 
   async getAllJobs(): Promise<Job[]> {
@@ -49,8 +47,7 @@ export class JobQueue {
   async deleteJob(jobId: string): Promise<boolean> {
     const deleted = this.jobs.delete(jobId);
     if (deleted) {
-      console.log(`Job ${jobId} deleted from queue`);
-    }
+      }
     return deleted;
   }
 
@@ -89,8 +86,7 @@ export class JobQueue {
     }
 
     if (deletedCount > 0) {
-      console.log(`Cleaned up ${deletedCount} old jobs`);
-    }
+        }
 
     return deletedCount;
   }

@@ -29,8 +29,7 @@ export class EvaluationPipeline {
   ): Promise<LLMResponse> {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        console.log(`LLM call attempt ${attempt}/${maxRetries}`);
-
+  
         const result = await this.genAI.models.generateContent({
           model: 'gemini-2.0-flash-001',
           contents: prompt,
@@ -46,8 +45,7 @@ export class EvaluationPipeline {
           throw new Error('Empty response from LLM');
         }
 
-        console.log(`LLM call successful on attempt ${attempt}`);
-        return { response: response.trim(), success: true };
+          return { response: response.trim(), success: true };
       } catch (error) {
         console.error(`LLM call attempt ${attempt} failed:`, error);
 
@@ -78,8 +76,7 @@ export class EvaluationPipeline {
         const jitter = Math.random() * 1000;
         const delay = baseDelay + jitter;
 
-        console.log(`Retrying in ${delay}ms...`);
-        await new Promise(resolve => setTimeout(resolve, delay));
+          await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
 
@@ -127,8 +124,7 @@ export class EvaluationPipeline {
     cvDocumentId: string,
     jobTitle: string
   ): Promise<CVEvaluation> {
-    console.log(`Starting CV evaluation for document: ${cvDocumentId}`);
-
+  
     // Retrieve relevant context
     const cvContext = await this.retrieveRelevantContext(
       cvDocumentId,
@@ -232,8 +228,7 @@ export class EvaluationPipeline {
   private async evaluateProjectReport(
     projectReportId: string
   ): Promise<ProjectEvaluation> {
-    console.log(`Starting project evaluation for document: ${projectReportId}`);
-
+  
     // Retrieve relevant context
     const projectContext = await this.retrieveRelevantContext(
       projectReportId,
@@ -400,8 +395,7 @@ export class EvaluationPipeline {
     projectReportId: string
   ): Promise<void> {
     try {
-      console.log(`Starting evaluation pipeline for job: ${jobId}`);
-
+  
       // Update job status to processing
       await this.jobQueue.updateJob(jobId, {
         status: 'processing',
@@ -472,9 +466,7 @@ export class EvaluationPipeline {
         result
       });
 
-      console.log(`Evaluation completed for job: ${jobId}`);
-      console.log(`Final scores - CV: ${result.finalScore.cvScore}, Project: ${result.finalScore.projectScore}, Overall: ${result.finalScore.overallScore}`);
-
+        
     } catch (error) {
       console.error(`Evaluation failed for job ${jobId}:`, error);
       await this.jobQueue.updateJob(jobId, {

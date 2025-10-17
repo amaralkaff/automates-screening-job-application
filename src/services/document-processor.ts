@@ -32,18 +32,6 @@ export class DocumentProcessor {
     }
   }
 
-export class DocumentProcessor {
-  private async extractTextFromPDF(filePath: string): Promise<string> {
-    try {
-      const fileBuffer = await readFile(filePath);
-      const data = await pdf(fileBuffer);
-      return data.text;
-    } catch (error) {
-      console.error('Error extracting text from PDF:', error);
-      throw new Error('Failed to extract text from PDF');
-    }
-  }
-
   private chunkText(text: string, chunkSize: number = 1000, overlap: number = 200): string[] {
     const chunks: string[] = [];
     let start = 0;
@@ -78,8 +66,7 @@ export class DocumentProcessor {
     documentType: DocumentMetadata['type']
   ): Promise<void> {
     try {
-      console.log(`Processing document: ${documentId} (${documentType})`);
-
+  
       // Extract text from PDF
       const text = await this.extractTextFromPDF(filePath);
 
@@ -115,8 +102,7 @@ export class DocumentProcessor {
         ids,
       });
 
-      console.log(`Successfully processed ${chunks.length} chunks for document ${documentId}`);
-    } catch (error) {
+      } catch (error) {
       console.error(`Error processing document ${documentId}:`, error);
       throw error;
     }
@@ -296,8 +282,7 @@ export class DocumentProcessor {
         });
       }
 
-      console.log('Reference documents ingested successfully');
-    } catch (error) {
+      } catch (error) {
       console.error('Error ingesting reference documents:', error);
       throw error;
     }
