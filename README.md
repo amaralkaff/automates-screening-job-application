@@ -2,6 +2,10 @@
 
 Automated job application screening using AI to evaluate CVs and project reports.
 
+## Architecture
+
+![architecture](architecture.png)
+
 ## Features
 
 - PDF upload and processing
