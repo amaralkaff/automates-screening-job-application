@@ -1,17 +1,31 @@
-import { Job } from '../types';
+import type { Job } from '../types';
+import type { EvaluationPipeline } from './evaluation-pipeline';
 
 export class JobQueue {
   private jobs: Map<string, Job> = new Map();
+  private isProcessing: boolean = false;
+  private evaluationPipeline?: EvaluationPipeline;
+
+  setEvaluationPipeline(pipeline: EvaluationPipeline): void {
+    this.evaluationPipeline = pipeline;
+  }
 
   async addJob(jobData: Omit<Job, 'id' | 'createdAt' | 'updatedAt'>): Promise<Job> {
     const job: Job = {
+      id: crypto.randomUUID(),
       ...jobData,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
 
     this.jobs.set(job.id, job);
-      return job;
+    
+    // Start processing if not already running
+    if (!this.isProcessing) {
+      this.startProcessing();
+    }
+    
+    return job;
   }
 
   async getJob(jobId: string): Promise<Job | null> {
@@ -108,5 +122,56 @@ export class JobQueue {
       completed: jobs.filter(job => job.status === 'completed').length,
       failed: jobs.filter(job => job.status === 'failed').length,
     };
+  }
+
+  // Start processing jobs in the queue
+  private async startProcessing(): Promise<void> {
+    if (this.isProcessing) {
+      return;
+    }
+
+    this.isProcessing = true;
+
+    while (true) {
+      const queuedJobs = await this.getQueuedJobs();
+      
+      if (queuedJobs.length === 0) {
+        this.isProcessing = false;
+        break;
+      }
+
+      const job = queuedJobs[0];
+      if (job) {
+        await this.processJob(job);
+      }
+    }
+  }
+
+  // Process a single job
+  private async processJob(job: Job): Promise<void> {
+    try {
+      if (!this.evaluationPipeline) {
+        throw new Error('Evaluation pipeline not initialized');
+      }
+
+      console.log(`🔄 Processing job ${job.id} for ${job.jobTitle}`);
+      
+      // Run the evaluation pipeline (it will handle status updates)
+      await this.evaluationPipeline.processEvaluation(
+        job.id,
+        job.jobTitle,
+        job.cvDocumentId,
+        job.projectReportId
+      );
+
+      console.log(`✅ Job ${job.id} completed successfully`);
+    } catch (error) {
+      console.error(`❌ Job ${job.id} failed:`, error);
+      
+      await this.updateJob(job.id, {
+        status: 'failed',
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      });
+    }
   }
 }

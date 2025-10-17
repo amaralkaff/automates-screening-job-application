@@ -2,8 +2,7 @@ import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
-import { zValidator } from '@hono/zod-validator';
-import { z } from 'zod';
+import { swaggerUI } from '@hono/swagger-ui';
 import { nanoid } from 'nanoid';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
@@ -25,8 +24,10 @@ app.use('*', logger());
 
 // Initialize services
 const documentProcessor = new DocumentProcessor();
-const evaluationPipeline = new EvaluationPipeline();
 const jobQueue = new JobQueue();
+const evaluationPipeline = new EvaluationPipeline(jobQueue);
+// Connect the services
+jobQueue.setEvaluationPipeline(evaluationPipeline);
 
 // Ensure uploads directory exists
 const UPLOAD_DIR = './uploads';
@@ -34,20 +35,344 @@ if (!existsSync(UPLOAD_DIR)) {
   await mkdir(UPLOAD_DIR, { recursive: true });
 }
 
-// Schemas for validation
-const uploadSchema = z.object({
-  cv: z.instanceof(File).refine(file => file.type === 'application/pdf', {
-    message: 'CV must be a PDF file',
-  }),
-  projectReport: z.instanceof(File).refine(file => file.type === 'application/pdf', {
-    message: 'Project report must be a PDF file',
-  }),
-});
+// OpenAPI specification
+const openAPISpec = {
+  openapi: '3.0.0',
+  info: {
+    title: 'AI CV Evaluation System API',
+    version: '1.0.0',
+    description: 'Backend service that automates the initial screening of job applications using AI',
+  },
+  servers: [
+    {
+      url: 'http://localhost:3000',
+      description: 'Development server',
+    },
+  ],
+  paths: {
+    '/health': {
+      get: {
+        tags: ['System'],
+        summary: 'Health check',
+        description: 'Check if the system is running',
+        responses: {
+          '200': {
+            description: 'System is healthy',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    status: { type: 'string', example: 'healthy' },
+                    timestamp: { type: 'string', example: '2025-01-01T00:00:00.000Z' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/upload': {
+      post: {
+        tags: ['Documents'],
+        summary: 'Upload CV and Project Report',
+        description: 'Upload candidate CV and project report PDFs for evaluation',
+        requestBody: {
+          required: true,
+          content: {
+            'multipart/form-data': {
+              schema: {
+                type: 'object',
+                required: ['cv', 'project-report'],
+                properties: {
+                  cv: {
+                    type: 'string',
+                    format: 'binary',
+                    description: 'Candidate CV (PDF file)',
+                  },
+                  'project-report': {
+                    type: 'string',
+                    format: 'binary',
+                    description: 'Project report (PDF file)',
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Files uploaded successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    cvDocumentId: { type: 'string', example: 'abc123def456' },
+                    projectReportId: { type: 'string', example: 'xyz789ghi012' },
+                    message: { type: 'string', example: 'Files uploaded and processed successfully' },
+                  },
+                },
+              },
+            },
+          },
+          '400': {
+            description: 'Invalid file format',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    error: { type: 'string', example: 'CV must be a PDF file' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/evaluate': {
+      post: {
+        tags: ['Evaluation'],
+        summary: 'Start evaluation job',
+        description: 'Trigger the AI evaluation pipeline for uploaded documents',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['jobTitle', 'cvDocumentId', 'projectReportId'],
+                properties: {
+                  jobTitle: {
+                    type: 'string',
+                    example: 'Product Engineer (Backend)',
+                    description: 'The job title being applied for',
+                  },
+                  cvDocumentId: {
+                    type: 'string',
+                    example: 'abc123def456',
+                    description: 'CV document ID from upload response',
+                  },
+                  projectReportId: {
+                    type: 'string',
+                    example: 'xyz789ghi012',
+                    description: 'Project report ID from upload response',
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Evaluation job started',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    jobId: { type: 'string', example: 'job_abc123' },
+                    status: { type: 'string', example: 'queued' },
+                    message: { type: 'string', example: 'Evaluation started. Use jobId to track progress.' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/status/{jobId}': {
+      get: {
+        tags: ['Evaluation'],
+        summary: 'Get job status',
+        description: 'Retrieve the status and results of an evaluation job',
+        parameters: [
+          {
+            name: 'jobId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string' },
+            description: 'The job ID returned from /evaluate endpoint',
+            example: 'job_abc123',
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Job status retrieved',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'string' },
+                    status: {
+                      type: 'string',
+                      enum: ['queued', 'processing', 'completed', 'failed'],
+                    },
+                    progress: { type: 'number', example: 75 },
+                    result: {
+                      type: 'object',
+                      properties: {
+                        cvEvaluation: {
+                          type: 'object',
+                          properties: {
+                            technicalSkillsMatch: {
+                              type: 'object',
+                              properties: {
+                                score: { type: 'number', example: 4 },
+                                details: { type: 'string' },
+                              },
+                            },
+                            experienceLevel: {
+                              type: 'object',
+                              properties: {
+                                score: { type: 'number', example: 3 },
+                                details: { type: 'string' },
+                              },
+                            },
+                            relevantAchievements: {
+                              type: 'object',
+                              properties: {
+                                score: { type: 'number', example: 4 },
+                                details: { type: 'string' },
+                              },
+                            },
+                            culturalFit: {
+                              type: 'object',
+                              properties: {
+                                score: { type: 'number', example: 4 },
+                                details: { type: 'string' },
+                              },
+                            },
+                          },
+                        },
+                        projectEvaluation: {
+                          type: 'object',
+                          properties: {
+                            correctness: {
+                              type: 'object',
+                              properties: {
+                                score: { type: 'number', example: 5 },
+                                details: { type: 'string' },
+                              },
+                            },
+                            codeQuality: {
+                              type: 'object',
+                              properties: {
+                                score: { type: 'number', example: 4 },
+                                details: { type: 'string' },
+                              },
+                            },
+                            resilience: {
+                              type: 'object',
+                              properties: {
+                                score: { type: 'number', example: 4 },
+                                details: { type: 'string' },
+                              },
+                            },
+                            documentation: {
+                              type: 'object',
+                              properties: {
+                                score: { type: 'number', example: 3 },
+                                details: { type: 'string' },
+                              },
+                            },
+                            creativity: {
+                              type: 'object',
+                              properties: {
+                                score: { type: 'number', example: 3 },
+                                details: { type: 'string' },
+                              },
+                            },
+                          },
+                        },
+                        overallSummary: { type: 'string' },
+                        finalScore: {
+                          type: 'object',
+                          properties: {
+                            cvScore: { type: 'number', example: 3.75 },
+                            projectScore: { type: 'number', example: 4.2 },
+                            overallScore: { type: 'number', example: 3.98 },
+                          },
+                        },
+                      },
+                    },
+                    error: { type: 'string' },
+                    createdAt: { type: 'string' },
+                    updatedAt: { type: 'string' },
+                  },
+                },
+              },
+            },
+          },
+          '404': {
+            description: 'Job not found',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    error: { type: 'string', example: 'Job not found' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/jobs': {
+      get: {
+        tags: ['Evaluation'],
+        summary: 'List all jobs',
+        description: 'Get a list of all evaluation jobs (for debugging)',
+        responses: {
+          '200': {
+            description: 'List of all jobs',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    jobs: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          id: { type: 'string' },
+                          status: { type: 'string' },
+                          progress: { type: 'number' },
+                          createdAt: { type: 'string' },
+                          updatedAt: { type: 'string' },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  tags: [
+    { name: 'System', description: 'System health and status endpoints' },
+    { name: 'Documents', description: 'Document upload and management' },
+    { name: 'Evaluation', description: 'AI evaluation pipeline endpoints' },
+  ],
+};
 
-const evaluationSchema = z.object({
-  jobTitle: z.string().min(1, 'Job title is required'),
-  cvDocumentId: z.string().min(1, 'CV document ID is required'),
-  projectReportId: z.string().min(1, 'Project report ID is required'),
+// Swagger UI
+app.get('/swagger', swaggerUI({ url: '/api-spec' }));
+
+// OpenAPI Spec endpoint
+app.get('/api-spec', (c) => {
+  return c.json(openAPISpec);
 });
 
 // Health check endpoint
@@ -97,15 +422,17 @@ app.post('/upload', async (c) => {
 });
 
 // POST /evaluate - Trigger evaluation pipeline
-app.post('/evaluate', zValidator('json', evaluationSchema), async (c) => {
+app.post('/evaluate', async (c) => {
   try {
-    const { jobTitle, cvDocumentId, projectReportId } = c.req.valid('json');
+    const body = await c.req.json();
+    const { jobTitle, cvDocumentId, projectReportId } = body;
 
-    // Generate job ID
-    const jobId = nanoid();
+    if (!jobTitle || !cvDocumentId || !projectReportId) {
+      return c.json({ error: 'Missing required fields' }, 400);
+    }
 
-    // Add to job queue
-    await jobQueue.addJob({
+    // Generate job ID and add to job queue
+    const job = await jobQueue.addJob({
       jobTitle,
       cvDocumentId,
       projectReportId,
@@ -113,11 +440,11 @@ app.post('/evaluate', zValidator('json', evaluationSchema), async (c) => {
     });
 
     // Start async processing
-    evaluationPipeline.processEvaluation(jobId, jobTitle, cvDocumentId, projectReportId)
+    evaluationPipeline.processEvaluation(job.id, jobTitle, cvDocumentId, projectReportId)
       .catch(error => console.error('Pipeline error:', error));
 
     return c.json({
-      jobId,
+      jobId: job.id,
       status: 'queued',
       message: 'Evaluation started. Use jobId to track progress.'
     });
@@ -155,9 +482,12 @@ app.get('/jobs', async (c) => {
   }
 });
 
-const port = parseInt(process.env.PORT || '3001');
+const port = parseInt(process.env.PORT || '3000');
 
 serve({
   fetch: app.fetch,
   port,
 });
+
+console.log(`Server ready on http://localhost:${port}`);
+console.log(`📚 Swagger UI available at http://localhost:${port}/swagger`);

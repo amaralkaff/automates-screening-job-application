@@ -7,7 +7,6 @@ const client = new CloudClient({
     database: process.env.CHROMA_DATABASE,
   });
 
-// Create embedding function with proper configuration
 const embedder = new GoogleGeminiEmbeddingFunction({
   apiKey: process.env.GEMINI_API_KEY!,
 });

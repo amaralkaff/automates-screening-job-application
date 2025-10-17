@@ -32,3 +32,24 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 # Finder (MacOS) folder config
 .DS_Store
+
+# Application data directories
+uploads/
+chroma/
+*.sqlite3
+*.sqlite3-*
+
+# Production files
+.env.production
+
+# Test files
+*-test.js
+*-test.*
+test-*.js
+comprehensive-*.js
+simple-*.js
+
+# Temporary files
+*.tmp
+*.temp
+.REQUIREMENTS_TEST_REPORT.md

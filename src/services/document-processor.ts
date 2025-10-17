@@ -32,7 +32,7 @@ export class DocumentProcessor {
     }
   }
 
-  private chunkText(text: string, chunkSize: number = 1000, overlap: number = 200): string[] {
+  private chunkText(text: string, chunkSize: number = 800, overlap: number = 200): string[] {
     const chunks: string[] = [];
     let start = 0;
 
@@ -66,7 +66,7 @@ export class DocumentProcessor {
     documentType: DocumentMetadata['type']
   ): Promise<void> {
     try {
-  
+
       // Extract text from PDF
       const text = await this.extractTextFromPDF(filePath);
 
@@ -95,12 +95,25 @@ export class DocumentProcessor {
 
       const ids = chunks.map((_, index) => `${documentId}-chunk-${index}`);
 
-      // Add to ChromaDB
-      await collection.add({
-        documents,
-        metadatas,
-        ids,
-      });
+      // ChromaDB batch size limit (maximum 1000 records per batch)
+      const BATCH_SIZE = 800;
+
+      // Process in batches to avoid ChromaDB batch size limits
+      for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
+        const endIndex = Math.min(i + BATCH_SIZE, chunks.length);
+
+        const batchDocuments = documents.slice(i, endIndex);
+        const batchMetadatas = metadatas.slice(i, endIndex);
+        const batchIds = ids.slice(i, endIndex);
+
+        await collection.add({
+          documents: batchDocuments,
+          metadatas: batchMetadatas,
+          ids: batchIds,
+        });
+
+        console.log(`Processed batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(chunks.length / BATCH_SIZE)} for document ${documentId}`);
+      }
 
       } catch (error) {
       console.error(`Error processing document ${documentId}:`, error);
@@ -260,6 +273,8 @@ export class DocumentProcessor {
         { text: projectScoringRubric, type: 'scoring_rubric' },
       ];
 
+      const BATCH_SIZE = 800;
+
       for (const doc of referenceDocs) {
         const chunks = this.chunkText(doc.text);
         const documents = chunks.map((chunk, index) =>
@@ -275,11 +290,22 @@ export class DocumentProcessor {
 
         const ids = chunks.map((_, index) => `ref-${doc.type}-chunk-${index}`);
 
-        await collection.add({
-          documents,
-          metadatas,
-          ids,
-        });
+        // Process in batches to avoid ChromaDB batch size limits
+        for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
+          const endIndex = Math.min(i + BATCH_SIZE, chunks.length);
+
+          const batchDocuments = documents.slice(i, endIndex);
+          const batchMetadatas = metadatas.slice(i, endIndex);
+          const batchIds = ids.slice(i, endIndex);
+
+          await collection.add({
+            documents: batchDocuments,
+            metadatas: batchMetadatas,
+            ids: batchIds,
+          });
+
+          console.log(`Processed reference batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(chunks.length / BATCH_SIZE)} for ${doc.type}`);
+        }
       }
 
       } catch (error) {

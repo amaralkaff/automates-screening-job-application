@@ -13,13 +13,13 @@ export class EvaluationPipeline {
   private genAI: GoogleGenAI;
   private jobQueue: JobQueue;
 
-  constructor() {
+  constructor(jobQueue: JobQueue) {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       throw new Error('GEMINI_API_KEY environment variable is not set');
     }
     this.genAI = new GoogleGenAI({ apiKey });
-    this.jobQueue = new JobQueue();
+    this.jobQueue = jobQueue;
   }
 
   private async callLLM(
@@ -190,7 +190,15 @@ export class EvaluationPipeline {
     }
 
     try {
-      const evaluation = JSON.parse(llmResponse.response);
+      // Strip markdown code blocks if present
+      let jsonString = llmResponse.response.trim();
+      if (jsonString.startsWith('```json')) {
+        jsonString = jsonString.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+      } else if (jsonString.startsWith('```')) {
+        jsonString = jsonString.replace(/^```\s*/, '').replace(/\s*```$/, '');
+      }
+      
+      const evaluation = JSON.parse(jsonString);
 
       // Validate and ensure all fields exist
       return {
@@ -298,7 +306,15 @@ export class EvaluationPipeline {
     }
 
     try {
-      const evaluation = JSON.parse(llmResponse.response);
+      // Strip markdown code blocks if present
+      let jsonString = llmResponse.response.trim();
+      if (jsonString.startsWith('```json')) {
+        jsonString = jsonString.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+      } else if (jsonString.startsWith('```')) {
+        jsonString = jsonString.replace(/^```\s*/, '').replace(/\s*```$/, '');
+      }
+      
+      const evaluation = JSON.parse(jsonString);
 
       // Validate and ensure all fields exist
       return {
