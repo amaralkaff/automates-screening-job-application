@@ -19,8 +19,15 @@ type AuthContext = {
 
 const router = new Hono<AuthContext>();
 
-// Apply general API rate limiting to all routes
-router.use('*', generalApiLimiter);
+// Apply general API rate limiting to all routes EXCEPT evaluation endpoint
+// The evaluation endpoint has its own stricter rate limit
+router.use('*', async (c, next) => {
+  // Skip general rate limiter for /evaluate endpoint - it has its own stricter limit
+  if (c.req.path === '/evaluate') {
+    return await next();
+  }
+  return await generalApiLimiter(c, next);
+});
 
 // Initialize services
 const documentProcessor = new DocumentProcessor();

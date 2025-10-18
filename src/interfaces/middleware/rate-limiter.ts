@@ -44,12 +44,15 @@ class SimpleRateLimiter {
     const cfConnectingIp = c.req.header('cf-connecting-ip');
     const xClientIp = c.req.header('x-client-ip');
 
-    const ip = xForwardedFor ||
+    const ip = (xForwardedFor ||
               xRealIp ||
               cfConnectingIp ||
               xClientIp ||
-              'unknown';
+              'unknown') as string;
 
+    // For forwarded IPs, take the first one (original client)
+    const finalIp = (ip.split(',')[0] || 'unknown').trim();
+    
     // Debug logging
     console.log('🔍 Rate Limiter IP Detection:', {
       'x-forwarded-for': xForwardedFor,
@@ -57,11 +60,12 @@ class SimpleRateLimiter {
       'cf-connecting-ip': cfConnectingIp,
       'x-client-ip': xClientIp,
       'detected-ip': ip,
-      'path': c.req.path
+      'final-ip': finalIp,
+      'path': c.req.path,
+      'method': c.req.method
     });
 
-    // For forwarded IPs, take the first one (original client)
-    return ip ? ip.split(',')[0].trim() : 'unknown';
+    return finalIp;
   }
 }
 
@@ -89,6 +93,14 @@ export function createRateLimiter(limiter: SimpleRateLimiter, options: {
 
     const clientKey = limiter.getClientKey(c);
     const result = limiter.isAllowed(clientKey);
+
+    console.log(`🔐 Rate Limit Check:`, {
+      path: c.req.path,
+      clientKey,
+      allowed: result.allowed,
+      remaining: result.remaining,
+      isEvaluationLimiter: limiter === evaluationRateLimiter
+    });
 
     // Add rate limit headers
     c.header('X-RateLimit-Limit', limiter['maxRequests'].toString());
@@ -124,9 +136,10 @@ export function createRateLimiter(limiter: SimpleRateLimiter, options: {
  * Rate limiter for evaluation endpoints - 3 evaluations per hour per IP
  */
 export const evaluationLimiterMiddleware = createRateLimiter(evaluationRateLimiter, {
-  skipPaths: ['/health', '/auth/sign-up', '/auth/sign-in', '/auth/sign-out', '/auth/me', '/upload', '/jobs', '/api-spec', '/swagger', '/'],
+  skipPaths: [], // Don't skip any paths - this is only applied to /evaluate
   generateResponse: (c, result) => {
-    console.warn(`Rate limit exceeded for evaluation from IP: ${evaluationRateLimiter.getClientKey(c)}`);
+    const clientKey = evaluationRateLimiter.getClientKey(c);
+    console.warn(`⚠️ Rate limit exceeded for evaluation from IP: ${clientKey}`);
 
     return c.json({
       error: 'Too many evaluation requests',
