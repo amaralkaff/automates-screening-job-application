@@ -79,7 +79,9 @@ router.post('/auth/sign-in', async (c) => {
       'Path=/',
       `Max-Age=${config.session.expiresIn / 1000}`,
       config.isProduction ? 'Secure' : '',
-      config.isProduction ? 'SameSite=Strict' : 'SameSite=Lax'
+      config.isProduction ? 'SameSite=Strict' : 'SameSite=Lax',
+      // Add additional security headers
+      config.isProduction ? 'Partitioned' : ''
     ].filter(Boolean).join('; ');
 
     c.res.headers.set('Set-Cookie', cookieOptions);
@@ -105,10 +107,18 @@ router.post('/auth/sign-out', async (c) => {
       c.req.header('Cookie')
     );
 
-    // Clear cookie
-    c.res.headers.set('Set-Cookie',
-      'session=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax'
-    );
+    // Clear cookie with matching security attributes
+    const clearCookieOptions = [
+      'session=',
+      'HttpOnly',
+      'Path=/',
+      'Max-Age=0',
+      config.isProduction ? 'Secure' : '',
+      config.isProduction ? 'SameSite=Strict' : 'SameSite=Lax',
+      config.isProduction ? 'Partitioned' : ''
+    ].filter(Boolean).join('; ');
+
+    c.res.headers.set('Set-Cookie', clearCookieOptions);
 
     return c.json({
       message: 'Signed out successfully',

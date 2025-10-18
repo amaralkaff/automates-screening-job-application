@@ -4,6 +4,7 @@ const envSchema = z.object({
   // Server
   PORT: z.string().default('3000'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  FORCE_HTTPS: z.string().transform(val => val === 'true').optional(),
 
   // APIs
   GEMINI_API_KEY: z.string().optional(),
@@ -71,15 +72,38 @@ export const config = {
   isDevelopment: process.env.NODE_ENV === 'development',
   isProduction: process.env.NODE_ENV === 'production',
 
-  // CORS origins
-  corsOrigins: [
-    'http://localhost:3000',
-    'http://localhost:5173',
-    'http://34.101.92.66:3000',
-    'http://34.101.92.66:3001',
-    'http://34.101.92.66',
-    'http://localhost:3001'
-  ],
+  // CORS origins - simple configuration (not used when origin: true)
+  get corsOrigins() {
+    // Keeping this for compatibility, but using simple CORS with origin: true
+    return [
+      'http://localhost:3000',
+      'https://localhost:3000',
+      'http://localhost:5173',
+      'https://localhost:5173',
+      'http://localhost:3001',
+      'https://localhost:3001',
+      'http://amangly.web.id',
+      'https://amangly.web.id',
+      'https://exquisite-beijinho-f79139.netlify.app'
+    ];
+  },
+
+  // Server URLs for generating links and redirects
+  get serverUrl() {
+    // Determine protocol based on environment and FORCE_HTTPS setting
+    let protocol = 'http';
+    if (this.isProduction || this.env.FORCE_HTTPS) {
+      protocol = 'https';
+    }
+
+    const host = this.isProduction ? 'amangly.web.id' : 'localhost';
+    const port = this.env.PORT;
+
+    // In production or when forcing HTTPS, use standard HTTPS port (443), otherwise use the configured port
+    const displayPort = (this.isProduction || this.env.FORCE_HTTPS) ? '' : `:${port}`;
+
+    return `${protocol}://${host}${displayPort}`;
+  },
 
   // File validation
   allowedMimeTypes: [

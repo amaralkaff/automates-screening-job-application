@@ -1,10 +1,6 @@
 # AI CV Screening System
 
- **Automated job application screening using AI with Gemini AI, ChromaDB (Vector Database), Hono API, PostgreSQL and Docker.**
-
-## ARCHITECTURE
-
-![architecture](architecture.jpg)
+Automated job application screening using AI with Gemini, ChromaDB, PostgreSQL, and Docker.
 
 ## Quick Start
 
@@ -22,13 +18,6 @@ Edit `.env` and add your API key:
 GEMINI_API_KEY=your-gemini-api-key-here
 ```
 
-**Important for Docker:** Make sure your `.env` file has the correct Docker configuration:
-```bash
-# For Docker usage (already set in docker-compose.yml)
-CHROMA_URL=http://chromadb:8000
-DATABASE_URL=postgresql://postgres:postgres123@postgres:5432/job_evaluation
-```
-
 ### 3. Start Application
 ```bash
 docker-compose up -d
@@ -36,25 +25,21 @@ docker-compose up -d
 
 ### 4. Access Application
 - **API**: http://localhost:3000
-- **Swagger**: http://localhost:3000/swagger
-- **Health**: http://localhost:3000/health
+- **Swagger Docs**: http://localhost:3000/swagger
+- **Health Check**: http://localhost:3000/health
 
 ## API Usage
 
-Visit **Swagger Documentation** at http://localhost:3000/swagger for:
+Visit the Swagger Documentation at http://localhost:3000/swagger for:
+- Complete API documentation
+- Interactive testing
+- Request/response examples
 
-- 📖 **Complete API Documentation**
-- 🧪 **Interactive API Testing**
-- 📝 **Request/Response Examples**
-- 🔍 **Authentication Guide**
-
-### Quick API Workflow:
-1. **Create Account** → `/api/auth/signup`
-2. **Upload Documents** → `/api/upload`
-3. **Start Evaluation** → `/api/evaluate`
-4. **Check Results** → `/api/status/{jobId}`
-
-All endpoints include detailed examples and can be tested directly in Swagger!
+**Quick Workflow:**
+1. Create Account → `/api/auth/signup`
+2. Upload Documents → `/api/upload`
+3. Start Evaluation → `/api/evaluate`
+4. Check Results → `/api/status/{jobId}`
 
 ## Docker Commands
 
@@ -65,8 +50,7 @@ docker-compose up -d
 # Stop all services
 docker-compose down
 
-# Rebuild and start (use after configuration changes)
-docker-compose down
+# Rebuild after changes
 docker-compose up --build
 
 # View logs
@@ -76,60 +60,37 @@ docker-compose logs -f
 docker-compose ps
 ```
 
-## Troubleshooting
-
-### ChromaDB Connection Issues
-If you see "ChromaDB initialization temporarily skipped", ensure:
-1. Your `.env` file has `CHROMA_URL=http://chromadb:8000` (not localhost)
-2. Rebuild containers after changing configuration:
-   ```bash
-   docker-compose down
-   docker-compose up --build
-   ```
-
-### Port already in use?
-```bash
-lsof -i :3000
-kill -9 <PID>
-```
-
-### Check services:
-```bash
-docker-compose ps
-curl http://localhost:3000/health
-```
-
-### View specific service logs:
-```bash
-# App logs
-docker-compose logs -f app
-
-# ChromaDB logs
-docker-compose logs -f chromadb
-
-# Database logs
-docker-compose logs -f postgres
-```
-
 ## Development Setup
 
-For local development (without Docker):
+For local development:
 
 1. Install dependencies:
 ```bash
 bun install
 ```
 
-2. Start PostgreSQL and ChromaDB:
+2. Start services:
 ```bash
 docker-compose up postgres chromadb -d
 ```
 
-3. Run the application:
+3. Run app:
 ```bash
 bun run dev
 ```
 
-## License
+## Troubleshooting
 
-Case study submission for backend developer evaluation.
+**ChromaDB Issues?**
+- Ensure `CHROMA_URL=http://chromadb:8000` in `.env`
+- Rebuild containers after config changes
+
+**Port in use?**
+```bash
+lsof -i :3000
+kill -9 <PID>
+```
+
+---
+
+*Case study submission for backend developer evaluation.*
