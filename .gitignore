@@ -39,8 +39,11 @@ chroma/
 *.sqlite3
 *.sqlite3-*
 
-# Production files
-.env.production
+# SSL certificates and production files
+nginx/ssl/*.pem
+nginx/ssl/*.key
+nginx/ssl/*.crt
+backups/
 
 # Test files
 *-test.js
@@ -53,3 +56,6 @@ simple-*.js
 *.tmp
 *.temp
 .REQUIREMENTS_TEST_REPORT.md
+
+# PM2
+.pm2/

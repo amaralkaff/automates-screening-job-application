@@ -10,12 +10,12 @@ export function createOpenAPISpec() {
     },
     servers: [
       {
-        url: `http://localhost:${config.env.PORT}`,
-        description: 'Local development server',
+        url: config.env.NODE_ENV === 'production' ? 'http://34.101.92.66' : `http://localhost:${config.env.PORT}`,
+        description: config.env.NODE_ENV === 'production' ? 'Production server' : 'Local development server',
       },
       {
-        url: 'http://34.101.92.66',
-        description: 'Production server',
+        url: config.env.NODE_ENV === 'production' ? `http://localhost:${config.env.PORT}` : 'http://34.101.92.66',
+        description: config.env.NODE_ENV === 'production' ? 'Local development server' : 'Production server',
       },
     ],
     paths: {
