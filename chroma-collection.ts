@@ -10,18 +10,25 @@ export async function getOrCreateCollection(name: string) {
   if (!chromaClient) {
     // Use Chroma Cloud if credentials are available, otherwise local
     if (process.env.CHROMA_API_KEY && process.env.CHROMA_TENANT) {
+      const cloudHost = `${process.env.CHROMA_TENANT}.chroma.cloud`;
       chromaClient = new ChromaClient({
-        path: `https://${process.env.CHROMA_TENANT}.chroma.cloud`,
-        auth: {
-          provider: "chromadb",
-          credentials: process.env.CHROMA_API_KEY,
+        ssl: true,
+        host: cloudHost,
+        port: 443,
+        headers: {
+          "Authorization": `Bearer ${process.env.CHROMA_API_KEY}`,
         },
         tenant: process.env.CHROMA_TENANT,
         database: process.env.CHROMA_DATABASE || "vps-gcp"
       });
     } else {
+      // Local ChromaDB setup
+      const chromaUrl = process.env.CHROMA_URL || "http://localhost:8000";
+      const url = new URL(chromaUrl);
       chromaClient = new ChromaClient({
-        path: process.env.CHROMA_URL || "http://localhost:8000"
+        ssl: url.protocol === 'https:',
+        host: url.hostname,
+        port: parseInt(url.port) || (url.protocol === 'https:' ? 443 : 8000)
       });
     }
   }

@@ -82,13 +82,47 @@ curl http://localhost:3000/status/{jobId}
 - Documentation (15%)
 - Creativity (10%)
 
-## Environment Variables
+## Environment Configuration
 
+### Local Development
+The `.env` file is already configured for local development with Docker:
 ```bash
-GEMINI_API_KEY=your_gemini_api_key
-PORT=3000
-REDIS_URL=redis://localhost:6379
 CHROMA_URL=http://localhost:8000
+REDIS_URL=redis://localhost:6379
+```
+
+### Production Deployment
+For production on `http://34.101.92.66`, either:
+
+**Option 1: Use `.env.production`**
+```bash
+cp .env.production .env
+bun start
+```
+
+**Option 2: Update `.env` manually**
+```bash
+# Uncomment and use production URLs in .env:
+CHROMA_URL=http://34.101.92.66:8000
+REDIS_URL=redis://34.101.92.66:6379
+```
+
+### Required Environment Variables
+```bash
+# Required
+GEMINI_API_KEY=your_gemini_api_key_here
+
+# Server
+PORT=3000
+NODE_ENV=development  # or production
+
+# ChromaDB (auto-detects local vs production)
+CHROMA_URL=http://localhost:8000
+
+# Redis
+REDIS_URL=redis://localhost:6379
+REDIS_HOST=localhost
+REDIS_PORT=6379
 ```
 
 ## License
