@@ -4,7 +4,7 @@
 
 ## ARCHITECTURE
 
-![architecture](architecture.png)
+![architecture](architecture.jpg)
 
 ## Quick Start
 
