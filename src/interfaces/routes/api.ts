@@ -7,6 +7,7 @@ import { config } from '../../config';
 import { DocumentProcessor } from '../../core/services/document-processor';
 import { EvaluationPipeline } from '../../core/services/evaluation-pipeline';
 import { requireAuth } from '../middleware/auth';
+import { evaluationLimiter, generalApiLimiter } from '../middleware/rate-limiter';
 import { db } from '../../infrastructure/database';
 import type { User } from '../../shared/types';
 
@@ -17,6 +18,9 @@ type AuthContext = {
 };
 
 const router = new Hono<AuthContext>();
+
+// Apply general API rate limiting to all routes
+router.use('*', generalApiLimiter);
 
 // Initialize services
 const documentProcessor = new DocumentProcessor();
@@ -68,8 +72,8 @@ router.post('/upload', requireAuth, async (c) => {
   }
 });
 
-// POST /evaluate - Trigger evaluation pipeline (protected)
-router.post('/evaluate', requireAuth, async (c) => {
+// POST /evaluate - Trigger evaluation pipeline (protected, rate limited)
+router.post('/evaluate', evaluationLimiter, requireAuth, async (c) => {
   try {
     const body = await c.req.json();
     const { jobTitle, cvDocumentId, projectReportId } = body;
@@ -108,11 +112,13 @@ router.post('/evaluate', requireAuth, async (c) => {
       }
     });
 
-    return c.json({
+    const response = {
       jobId: job.id,
       status: 'processing',
       message: 'Evaluation started immediately. Use jobId to track progress.'
-    });
+    };
+
+    return c.json(response);
   } catch (error) {
     console.error('Evaluation error:', error);
     return c.json({ error: 'Failed to start evaluation' }, 500);

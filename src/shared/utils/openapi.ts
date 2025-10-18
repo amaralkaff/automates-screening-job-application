@@ -285,7 +285,7 @@ export function createOpenAPISpec() {
         post: {
           tags: ['Evaluation'],
           summary: 'Start evaluation job',
-          description: 'Trigger the AI evaluation pipeline for uploaded documents',
+          description: 'Trigger the AI evaluation pipeline for uploaded documents. **Rate limited to 3 evaluations per hour per IP address**.',
           security: [{ bearerAuth: [] }],
           requestBody: {
             required: true,
@@ -615,6 +615,37 @@ export function createOpenAPISpec() {
             }
           },
           required: ['error']
+        },
+        RateLimitError: {
+          type: 'object',
+          properties: {
+            error: {
+              type: 'string',
+              example: 'Too many evaluation requests'
+            },
+            details: {
+              type: 'string',
+              example: 'You have exceeded the limit of 3 evaluation tests per hour. Please try again later.'
+            },
+            retryAfter: {
+              type: 'string',
+              example: '1 hour'
+            },
+            status: {
+              type: 'string',
+              example: 'error'
+            },
+            remaining: {
+              type: 'number',
+              example: 0
+            },
+            resetTime: {
+              type: 'string',
+              format: 'date-time',
+              example: '2025-01-01T01:00:00.000Z'
+            }
+          },
+          required: ['error', 'details', 'retryAfter', 'status']
         },
         UploadResponse: {
           type: 'object',
