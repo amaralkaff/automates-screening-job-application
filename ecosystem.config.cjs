@@ -4,7 +4,6 @@ module.exports = {
       name: 'job-evaluation-app',
       script: 'src/start.ts',
       interpreter: 'bun',
-      interpreter_args: '--bun',
       instances: 1,
       autorestart: true,
       watch: false,
@@ -30,8 +29,8 @@ module.exports = {
         MAX_FILE_SIZE: '10485760',
         QUEUE_CONCURRENCY: '3',
         BETTER_AUTH_SECRET: 'palepale123',
-        BETTER_AUTH_URL: 'http://34.101.92.66',
-        GEMINI_API_KEY: 'AIzaSyBWwZ58TU9tmrAWPVTA6ZvPb0gD615DOg8'
+        BETTER_AUTH_URL: 'https://34.101.92.66',
+        GEMINI_API_KEY: process.env.GEMINI_API_KEY || ''
       },
       error_file: './logs/err.log',
       out_file: './logs/out.log',
