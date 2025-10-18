@@ -2,6 +2,10 @@
 
 Automated job application screening using AI with Gemini, ChromaDB, PostgreSQL, and Docker.
 
+## ARCHITECTURE
+
+![architecture](architecture.jpg)
+
 ## Quick Start
 
 ### 1. Get Gemini API Key
