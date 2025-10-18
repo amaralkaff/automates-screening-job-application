@@ -1,4 +1,4 @@
-import type { Job } from '../types';
+import type { Job } from '../../shared/types';
 import type { EvaluationPipeline } from './evaluation-pipeline';
 
 export class JobQueue {

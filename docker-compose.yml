@@ -1,15 +1,76 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: job-evaluation-db
+    environment:
+      POSTGRES_DB: job_evaluation
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    networks:
+      - job-evaluation-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
   chromadb:
     image: chromadb/chroma:latest
-    container_name: chromadb
+    container_name: job-evaluation-chroma
     ports:
       - "8000:8000"
+    volumes:
+      - chromadb_data:/chroma/chroma
     environment:
       - CHROMA_SERVER_HOST=0.0.0.0
       - CHROMA_SERVER_HTTP_PORT=8000
-    volumes:
-      - chroma_data:/chroma/chroma
+      - ANONYMIZED_TELEMETRY=False
+    networks:
+      - job-evaluation-network
     restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: job-evaluation-app
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL=postgresql://postgres:postgres123@postgres:5432/job_evaluation
+      - CHROMA_URL=http://chromadb:8000
+      - SESSION_SECRET=your-production-secret-key-here
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      chromadb:
+        condition: service_started
+    networks:
+      - job-evaluation-network
+    restart: unless-stopped
+    volumes:
+      - ./uploads:/app/uploads
+      - ./data:/app/data
 
 volumes:
-  chroma_data:
+  postgres_data:
+    driver: local
+  chromadb_data:
+    driver: local
+
+networks:
+  job-evaluation-network:
+    driver: bridge

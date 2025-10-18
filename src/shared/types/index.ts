@@ -9,6 +9,7 @@ export interface Job {
   error?: string;
   createdAt: Date;
   updatedAt: Date;
+  userId?: string; // Added for SQLite integration
 }
 
 export interface EvaluationResult {
@@ -70,4 +71,20 @@ export interface DocumentMetadata {
   filename: string;
   uploadedAt: Date;
   processed: boolean;
+  userId?: string; // Added for SQLite integration
+  filePath?: string; // Added for SQLite integration
+  fileSize?: number; // Added for SQLite integration
+  mimeType?: string; // Added for SQLite integration
+  chromaCollectionId?: string; // Added for SQLite integration
+}
+
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+}
+
+export interface Session {
+  token: string;
+  user: User;
 }

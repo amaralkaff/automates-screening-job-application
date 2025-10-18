@@ -1,128 +1,133 @@
 # AI CV Screening System
 
-Automated job application screening using AI to evaluate CVs and project reports.
+ **Automated job application screening using AI with Gemini AI, ChromaDB (Vector Database), Hono API, PostgreSQL and Docker.**
 
-## Architecture
+## ARCHITECTURE
 
 ![architecture](architecture.png)
 
-## Features
-
-- PDF upload and processing
-- AI-powered evaluation with detailed scoring
-- Background job processing
-- REST API with Swagger documentation
-
 ## Quick Start
 
-### 1. Install Dependencies
-```bash
-bun install
-```
+### 1. Get Gemini API Key
+- Visit [Google AI Studio](https://makersuite.google.com/app/apikey)
+- Copy your API key
 
-### 2. Set Environment
+### 2. Setup Environment
 ```bash
 cp .env.example .env
-# Add your GEMINI_API_KEY to .env
 ```
 
-### 3. Start Services
+Edit `.env` and add your API key:
 ```bash
-# Start ChromaDB and Redis
-docker-compose up -d
-
-# Start application
-bun start
-# or with PM2
-pm2 start bun --name cv-screening -- src/server.ts
+GEMINI_API_KEY=your-gemini-api-key-here
 ```
 
-### 4. Access API
+**Important for Docker:** Make sure your `.env` file has the correct Docker configuration:
+```bash
+# For Docker usage (already set in docker-compose.yml)
+CHROMA_URL=http://chromadb:8000
+DATABASE_URL=postgresql://postgres:postgres123@postgres:5432/job_evaluation
+```
+
+### 3. Start Application
+```bash
+docker-compose up -d
+```
+
+### 4. Access Application
 - **API**: http://localhost:3000
 - **Swagger**: http://localhost:3000/swagger
 - **Health**: http://localhost:3000/health
 
 ## API Usage
 
-### Upload Documents
+Visit **Swagger Documentation** at http://localhost:3000/swagger for:
+
+- 📖 **Complete API Documentation**
+- 🧪 **Interactive API Testing**
+- 📝 **Request/Response Examples**
+- 🔍 **Authentication Guide**
+
+### Quick API Workflow:
+1. **Create Account** → `/api/auth/signup`
+2. **Upload Documents** → `/api/upload`
+3. **Start Evaluation** → `/api/evaluate`
+4. **Check Results** → `/api/status/{jobId}`
+
+All endpoints include detailed examples and can be tested directly in Swagger!
+
+## Docker Commands
+
 ```bash
-curl -X POST http://localhost:3000/upload \
-  -F "cv=@cv.pdf" \
-  -F "project-report=@project.pdf"
+# Start all services
+docker-compose up -d
+
+# Stop all services
+docker-compose down
+
+# Rebuild and start (use after configuration changes)
+docker-compose down
+docker-compose up --build
+
+# View logs
+docker-compose logs -f
+
+# Check status
+docker-compose ps
 ```
 
-### Start Evaluation
+## Troubleshooting
+
+### ChromaDB Connection Issues
+If you see "ChromaDB initialization temporarily skipped", ensure:
+1. Your `.env` file has `CHROMA_URL=http://chromadb:8000` (not localhost)
+2. Rebuild containers after changing configuration:
+   ```bash
+   docker-compose down
+   docker-compose up --build
+   ```
+
+### Port already in use?
 ```bash
-curl -X POST http://localhost:3000/evaluate \
-  -H "Content-Type: application/json" \
-  -d '{
-    "jobTitle": "Product Engineer (Backend)",
-    "cvDocumentId": "cv_id",
-    "projectReportId": "project_id"
-  }'
+lsof -i :3000
+kill -9 <PID>
 ```
 
-### Check Results
+### Check services:
 ```bash
-curl http://localhost:3000/status/{jobId}
+docker-compose ps
+curl http://localhost:3000/health
 ```
 
-## Scoring System
-
-**CV Evaluation (1-5 scale)**
-- Technical Skills Match (40%)
-- Experience Level (25%)
-- Relevant Achievements (20%)
-- Cultural Fit (15%)
-
-**Project Evaluation (1-5 scale)**
-- Correctness (30%)
-- Code Quality (25%)
-- Resilience (20%)
-- Documentation (15%)
-- Creativity (10%)
-
-## Environment Configuration
-
-### Local Development
-The `.env` file is already configured for local development with Docker:
+### View specific service logs:
 ```bash
-CHROMA_URL=http://localhost:8000
-REDIS_URL=redis://localhost:6379
+# App logs
+docker-compose logs -f app
+
+# ChromaDB logs
+docker-compose logs -f chromadb
+
+# Database logs
+docker-compose logs -f postgres
 ```
 
-### Production Deployment
-For production on `http://34.101.92.66`, either:
+## Development Setup
 
-**Option 1: Use `.env.production`**
+For local development (without Docker):
+
+1. Install dependencies:
 ```bash
-cp .env.production .env
-bun start
+bun install
 ```
 
-**Option 2: Update `.env` manually**
+2. Start PostgreSQL and ChromaDB:
 ```bash
-# Uncomment and use production URLs in .env:
-CHROMA_URL=http://34.101.92.66:8000
-REDIS_URL=redis://34.101.92.66:6379
+docker-compose up postgres chromadb -d
 ```
 
-### Required Environment Variables
+3. Run the application:
 ```bash
-# Required
-GEMINI_API_KEY=your_gemini_api_key_here
-
-# Server
-PORT=3000
-NODE_ENV=development  # or production
-
-# ChromaDB (auto-detects local vs production)
-CHROMA_URL=http://localhost:8000
-
-# Redis
-REDIS_URL=redis://localhost:6379
-REDIS_HOST=localhost
-REDIS_PORT=6379
+bun run dev
 ```
 
 ## License

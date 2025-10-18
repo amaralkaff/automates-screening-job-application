@@ -1,8 +1,8 @@
 import 'pdf-parse/worker';
-import { readFile } from 'fs/promises';
+import { readFile } from 'node:fs/promises';
 import { PDFParse } from 'pdf-parse';
-import { getOrCreateCollection } from '../../chroma-collection';
-import type { DocumentMetadata } from '../types';
+import { getOrCreateCollection } from '../../infrastructure/chroma-collection';
+import type { DocumentMetadata } from '../../shared/types';
 
 export class DocumentProcessor {
   private async extractTextFromFile(filePath: string): Promise<string> {
@@ -44,7 +44,7 @@ export class DocumentProcessor {
           } else {
             return `PDF document processed. File size: ${fileBuffer.length} bytes`;
           }
-        } catch (error) {
+        } catch (_error) {
           // If UTF-8 conversion fails, treat as binary PDF
           return `PDF document processed successfully. File size: ${fileBuffer.length} bytes`;
         }
@@ -125,7 +125,7 @@ export class DocumentProcessor {
         `${documentType.toUpperCase()} CHUNK ${index + 1}:\n${chunk}`
       );
 
-      const metadatas = chunks.map((chunk, index) => ({
+      const metadatas = chunks.map((_chunk, index) => ({
         documentId,
         documentType,
         chunkIndex: index,
