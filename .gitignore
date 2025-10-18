@@ -59,3 +59,5 @@ simple-*.js
 
 # PM2
 .pm2/
+ecosystem.config.cjs
+*.log
