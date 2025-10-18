@@ -45,7 +45,7 @@ app.get('/api-spec', (c) => {
 });
 
 // Start server
-const port = parseInt(config.env.PORT, 10);
+const port = Number.parseInt(config.env.PORT, 10);
 
 serve({
   fetch: app.fetch,

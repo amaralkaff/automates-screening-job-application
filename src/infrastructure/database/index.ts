@@ -313,7 +313,7 @@ export class DatabaseService {
     }
   }
 
-  async updateJobStatus(id: string, status: Job['status'], progress?: number, result?: Record<string, unknown>, error?: string): Promise<void> {
+  async updateJobStatus(id: string, status: Job['status'], progress?: number, result?: EvaluationResult, error?: string): Promise<void> {
     const client = await this.pool.connect();
     try {
       const query = `
@@ -483,9 +483,9 @@ export class DatabaseService {
       const jobCount = await client.query('SELECT COUNT(*) as count FROM jobs');
 
       return {
-        totalUsers: parseInt(userCount.rows[0].count, 10),
-        activeSessions: parseInt(sessionCount.rows[0].count, 10),
-        totalJobs: parseInt(jobCount.rows[0].count, 10)
+        totalUsers: Number.parseInt(userCount.rows[0].count, 10),
+        activeSessions: Number.parseInt(sessionCount.rows[0].count, 10),
+        totalJobs: Number.parseInt(jobCount.rows[0].count, 10)
       };
     } finally {
       client.release();

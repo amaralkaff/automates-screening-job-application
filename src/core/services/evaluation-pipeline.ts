@@ -22,8 +22,8 @@ export class EvaluationPipeline {
 
   private async callLLM(
     prompt: string,
-    maxRetries: number = 3,
-    temperature: number = 0.3
+    maxRetries = 3,
+    temperature = 0.3
   ): Promise<LLMResponse> {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
@@ -85,7 +85,7 @@ export class EvaluationPipeline {
     documentId: string,
     query: string,
     documentType: string,
-    nResults: number = 5
+    nResults = 5
   ): Promise<string> {
     try {
       const collection = await getOrCreateCollection('documents');
@@ -119,9 +119,9 @@ export class EvaluationPipeline {
       // Provide fallback context based on document type
       if (documentType === 'cv') {
         return 'CV content available for analysis';
-      } else if (documentType === 'project_report') {
+      }if (documentType === 'project_report') {
         return 'Project report content available for analysis';
-      } else if (documentType === 'job_description') {
+      }if (documentType === 'job_description') {
         return `
           JOB REQUIREMENTS: Product Engineer (Backend)
           - Building new product features using Agile methodology
@@ -132,7 +132,7 @@ export class EvaluationPipeline {
           - Implementing safeguards for 3rd party API failures
           - Experience with backend development, databases, APIs
         `;
-      } else if (documentType === 'scoring_rubric') {
+      }if (documentType === 'scoring_rubric') {
         return `
           EVALUATION CRITERIA:
           Technical Skills: 1-5 scale, assess coding ability, tech stack knowledge

@@ -41,9 +41,8 @@ export class DocumentProcessor {
 
           if (cleanText.length > 50) {
             return this.sanitizeText(cleanText);
-          } else {
-            return `PDF document processed. File size: ${fileBuffer.length} bytes`;
           }
+            return `PDF document processed. File size: ${fileBuffer.length} bytes`;
         } catch (_error) {
           // If UTF-8 conversion fails, treat as binary PDF
           return `PDF document processed successfully. File size: ${fileBuffer.length} bytes`;
@@ -69,7 +68,7 @@ export class DocumentProcessor {
       .trim();
   }
 
-  private chunkText(text: string, chunkSize: number = 800, overlap: number = 200): string[] {
+  private chunkText(text: string, chunkSize = 800, overlap = 200): string[] {
     // Sanitize text first to prevent ChromaDB JSON encoding issues
     const cleanText = this.sanitizeText(text);
 

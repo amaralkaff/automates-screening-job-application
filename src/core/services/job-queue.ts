@@ -3,7 +3,7 @@ import type { EvaluationPipeline } from './evaluation-pipeline';
 
 export class JobQueue {
   private jobs: Map<string, Job> = new Map();
-  private isProcessing: boolean = false;
+  private isProcessing = false;
   private evaluationPipeline?: EvaluationPipeline;
 
   setEvaluationPipeline(pipeline: EvaluationPipeline): void {
@@ -88,7 +88,7 @@ export class JobQueue {
   }
 
   // Cleanup old jobs (older than specified hours)
-  async cleanupOldJobs(maxAgeHours: number = 24): Promise<number> {
+  async cleanupOldJobs(maxAgeHours = 24): Promise<number> {
     const cutoffTime = new Date(Date.now() - maxAgeHours * 60 * 60 * 1000);
     let deletedCount = 0;
 

@@ -32,7 +32,7 @@ export async function getOrCreateCollection(name: string) {
         chromaClient = new ChromaClient({
           ssl: url.protocol === 'https:',
           host: url.hostname,
-          port: parseInt(url.port, 10) || (url.protocol === 'https:' ? 443 : 8000)
+          port: Number.parseInt(url.port, 10) || (url.protocol === 'https:' ? 443 : 8000)
         });
       }
 
